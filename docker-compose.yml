@@ -1,0 +1,75 @@
+version: "2.4"
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-umbrella}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-umbrella}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD in .env}
+    volumes:
+      - ${DATA_ROOT:-/data02/umbrella-activity}/clickhouse:/var/lib/clickhouse
+      - ./deploy/clickhouse/config.xml:/etc/clickhouse-server/config.d/umbrella.xml:ro
+      - ./deploy/clickhouse/users.xml:/etc/clickhouse-server/users.d/umbrella.xml:ro
+    ports:
+      - "${CLICKHOUSE_HTTP_PORT:-8123}:8123"
+      - "${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    environment:
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-umbrella}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD in .env}
+      CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE:-umbrella}
+      DOWNLOAD_CACHE_DIR: /data/download-cache
+      UMBRELLA_BASE_URL: ${UMBRELLA_BASE_URL:-http://s3-us-west-1.amazonaws.com/umbrella-static}
+      MAX_QUERY_DAYS: ${MAX_QUERY_DAYS:-365}
+    volumes:
+      - ${DATA_ROOT:-/data02/umbrella-activity}/download-cache:/data/download-cache
+    ports:
+      - "${BACKEND_PORT:-8002}:8002"
+
+  ingest-worker:
+    build:
+      context: ./backend
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    environment:
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-umbrella}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD in .env}
+      CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE:-umbrella}
+      DOWNLOAD_CACHE_DIR: /data/download-cache
+      UMBRELLA_BASE_URL: ${UMBRELLA_BASE_URL:-http://s3-us-west-1.amazonaws.com/umbrella-static}
+      MAX_QUERY_DAYS: ${MAX_QUERY_DAYS:-365}
+    volumes:
+      - ${DATA_ROOT:-/data02/umbrella-activity}/download-cache:/data/download-cache
+    command: ["python", "-m", "app.cli.ingest", "--date", "yesterday"]
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-80}:80"

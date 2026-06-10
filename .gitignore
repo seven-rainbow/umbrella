@@ -1,0 +1,19 @@
+.env
+*.log
+*.tar.gz
+*.zip
+
+# Python
+backend/.venv/
+backend/.pytest_cache/
+backend/**/__pycache__/
+backend/**/*.pyc
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Runtime data
+data/clickhouse/
+data/download-cache/*
+!data/download-cache/.gitkeep
