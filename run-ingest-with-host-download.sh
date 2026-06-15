@@ -20,10 +20,18 @@ TODAY="$(date +%F)"
 FAILED_FILE="$PROJECT_DIR/ingest-failed-dates.txt"
 MIN_ROWS_PER_DAY=900000
 MAX_DOWNLOAD_ATTEMPTS=8
-DOCKER_COMPOSE="${DOCKER_COMPOSE:-docker compose}"
 CLICKHOUSE_USER="${CLICKHOUSE_USER:-umbrella}"
 CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD must be set in .env or the environment}"
 CLICKHOUSE_DATABASE="${CLICKHOUSE_DATABASE:-umbrella}"
+
+if [ -n "${DOCKER_COMPOSE:-}" ]; then
+  # shellcheck disable=SC2206
+  DOCKER_COMPOSE_CMD=($DOCKER_COMPOSE)
+elif command -v docker-compose >/dev/null 2>&1; then
+  DOCKER_COMPOSE_CMD=(docker-compose)
+else
+  DOCKER_COMPOSE_CMD=(docker compose)
+fi
 
 mkdir -p "$CACHE_DIR"
 touch "$FAILED_FILE"
@@ -35,7 +43,7 @@ log() {
 rows_for_date() {
   local snapshot_date="$1"
   cd "$PROJECT_DIR"
-  $DOCKER_COMPOSE exec -T clickhouse clickhouse-client \
+  "${DOCKER_COMPOSE_CMD[@]}" exec -T clickhouse clickhouse-client \
     --user "$CLICKHOUSE_USER" \
     --password "$CLICKHOUSE_PASSWORD" \
     --query "SELECT count() FROM $CLICKHOUSE_DATABASE.domain_rank_daily WHERE snapshot_date = '$snapshot_date'" 2>/dev/null || echo 0
@@ -103,7 +111,7 @@ while [ "$current" != "$end_exclusive" ]; do
 
   log "[$current] container import start"
   cd "$PROJECT_DIR"
-  if $DOCKER_COMPOSE run --rm \
+  if "${DOCKER_COMPOSE_CMD[@]}" run --rm \
     -e no_proxy=clickhouse,backend,frontend,localhost,127.0.0.1 \
     -e NO_PROXY=clickhouse,backend,frontend,localhost,127.0.0.1 \
     ingest-worker python -m app.cli.ingest --date "$current"; then

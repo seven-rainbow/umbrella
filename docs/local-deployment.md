@@ -52,6 +52,8 @@ CLICKHOUSE_HTTP_PORT=8123
 CLICKHOUSE_NATIVE_PORT=9000
 ```
 
+下面示例默认使用 Docker Compose v2 的 `docker compose` 命令。如果服务器只安装了独立命令 `docker-compose`，把示例中的 `docker compose` 替换为 `docker-compose` 即可。
+
 2. 构建前端静态文件：
 
 ```bash
@@ -172,6 +174,12 @@ bash run-ingest-with-host-download.sh 2026-06-01 2026-06-08
 ```
 
 脚本会自动读取项目目录下的 `.env`。也可以通过环境变量覆盖 `PROJECT_DIR`、`DATA_ROOT`、`CACHE_DIR`、`DOCKER_COMPOSE`、`CLICKHOUSE_USER`、`CLICKHOUSE_PASSWORD` 和 `CLICKHOUSE_DATABASE`。
+
+脚本会自动选择可用的 Compose 命令：优先使用环境变量 `DOCKER_COMPOSE`，其次使用 `docker-compose`，最后使用 `docker compose`。如果需要显式指定，可这样运行：
+
+```bash
+DOCKER_COMPOSE=docker-compose bash run-ingest-with-host-download.sh 2026-06-01 2026-06-08
+```
 
 ## 定时导入
 
