@@ -38,11 +38,15 @@
       <button class="query-submit" type="submit" :disabled="loading || Boolean(rangeError)">
         {{ loading ? 'Loading' : 'Query' }}
       </button>
+      <button class="assessment-submit" type="button" :disabled="assessmentLoading || loading || Boolean(rangeError)" @click="$emit('assess')">
+        {{ assessmentLoading ? 'Assessing' : 'Assess' }}
+      </button>
       <div class="range-presets" aria-label="Date range presets">
         <button type="button" @click="$emit('apply-range', 30)">30D</button>
         <button type="button" @click="$emit('apply-range', 90)">90D</button>
         <button type="button" @click="$emit('apply-range', 180)">180D</button>
         <button type="button" @click="$emit('apply-range', 365)">1Y</button>
+        <button type="button" @click="$emit('open-settings')">Model Settings</button>
       </div>
       <p v-if="rangeError" class="range-error">{{ rangeError }}</p>
     </form>
@@ -67,6 +71,10 @@ defineProps({
     type: Boolean,
     required: true
   },
+  assessmentLoading: {
+    type: Boolean,
+    default: false
+  },
   maxDate: {
     type: String,
     required: true
@@ -77,5 +85,5 @@ defineProps({
   }
 })
 
-defineEmits(['submit', 'update:domain', 'update:fromDate', 'update:toDate', 'apply-range'])
+defineEmits(['submit', 'assess', 'open-settings', 'update:domain', 'update:fromDate', 'update:toDate', 'apply-range'])
 </script>

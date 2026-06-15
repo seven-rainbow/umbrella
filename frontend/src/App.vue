@@ -2,12 +2,20 @@
   <main class="dashboard-shell">
     <OverviewSidebar :overview="overview" :activity="activity" />
 
-    <TopDomainsPanel
-      :snapshot-date="topDomains?.snapshot_date"
-      :domains="topDomains?.domains ?? []"
-      :selected-domain="domain"
-      @select="selectTopDomain"
-    />
+    <div class="side-list-stack">
+      <TopDomainsPanel
+        :snapshot-date="topDomains?.snapshot_date"
+        :domains="topDomains?.domains ?? []"
+        :selected-domain="domain"
+        @select="selectTopDomain"
+      />
+      <VolatileDomainsPanel
+        :snapshot-date="volatileDomains?.snapshot_date"
+        :domains="volatileDomains?.domains ?? []"
+        @select="selectTopDomain"
+        @assess="assessVolatileDomain"
+      />
+    </div>
 
     <div class="main-content">
       <QueryPanel
@@ -15,9 +23,12 @@
         v-model:from-date="fromDate"
         v-model:to-date="toDate"
         :loading="loading"
+        :assessment-loading="assessmentLoading"
         :max-date="today"
         :range-error="dateRangeError"
         @apply-range="applyDateRange"
+        @assess="runAssessment"
+        @open-settings="modelSettingsOpen = true"
         @submit="loadActivity"
       />
 
@@ -45,17 +56,25 @@
         :from-date="selectedDailyRange.from"
         :to-date="selectedDailyRange.to"
       />
+
+      <AssessmentPanel :assessment="assessment" :loading="assessmentLoading" :error="assessmentError" />
     </div>
+
+    <ModelSettingsModal :open="modelSettingsOpen" @close="modelSettingsOpen = false" />
   </main>
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import AssessmentPanel from './components/AssessmentPanel.vue'
 import DailyRankTable from './components/DailyRankTable.vue'
+import ModelSettingsModal from './components/ModelSettingsModal.vue'
 import OverviewSidebar from './components/OverviewSidebar.vue'
 import QueryPanel from './components/QueryPanel.vue'
 import RankChart from './components/RankChart.vue'
 import TopDomainsPanel from './components/TopDomainsPanel.vue'
+import VolatileDomainsPanel from './components/VolatileDomainsPanel.vue'
+import { fetchDomainAssessments, fetchVolatileDomains, runDomainAssessment } from './services/assessmentApi'
 import { fetchActivity } from './services/activityApi'
 import { fetchCurrentTopDomains, fetchOverview } from './services/statsApi'
 
@@ -63,12 +82,17 @@ const domain = ref('example.com')
 const activity = ref(null)
 const overview = ref(null)
 const topDomains = ref(null)
+const volatileDomains = ref(null)
+const assessment = ref(null)
 const loading = ref(false)
+const assessmentLoading = ref(false)
 const error = ref('')
+const assessmentError = ref('')
 const fromDate = ref('')
 const toDate = ref('')
 const today = isoDate(new Date())
 const chartVisibleRange = ref(null)
+const modelSettingsOpen = ref(false)
 
 const latestRank = computed(() => {
   if (!activity.value) return '-'
@@ -147,6 +171,7 @@ async function loadActivity() {
       from: activity.value.from,
       to: activity.value.to
     }
+    await loadLatestAssessment()
   } catch (err) {
     error.value = err.message
   } finally {
@@ -157,6 +182,31 @@ async function loadActivity() {
 async function selectTopDomain(selectedDomain) {
   domain.value = selectedDomain
   await loadActivity()
+}
+
+async function runAssessment() {
+  if (!domain.value) return
+  if (!activity.value) {
+    await loadActivity()
+  }
+  assessmentLoading.value = true
+  assessmentError.value = ''
+  try {
+    assessment.value = await runDomainAssessment(domain.value, fromDate.value, toDate.value)
+  } catch (err) {
+    assessmentError.value = err.message
+    if (err.message === 'No default model configured') {
+      modelSettingsOpen.value = true
+    }
+  } finally {
+    assessmentLoading.value = false
+  }
+}
+
+async function assessVolatileDomain(selectedDomain) {
+  domain.value = selectedDomain
+  await loadActivity()
+  await runAssessment()
 }
 
 async function loadOverview() {
@@ -175,10 +225,37 @@ async function loadTopDomains() {
   }
 }
 
+async function loadVolatileDomains() {
+  try {
+    volatileDomains.value = await fetchVolatileDomains()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+async function loadLatestAssessment() {
+  assessment.value = null
+  assessmentError.value = ''
+  try {
+    const history = await fetchDomainAssessments(domain.value, 1)
+    if (history.reports.length > 0) {
+      assessment.value = {
+        job_id: history.reports[0].job_id,
+        status: 'success',
+        domain: history.domain,
+        report: history.reports[0].report
+      }
+    }
+  } catch {
+    // Assessment history is supplemental; keep the rank query visible if it fails.
+  }
+}
+
 onMounted(() => {
   resetDates()
   loadOverview()
   loadTopDomains()
+  loadVolatileDomains()
 })
 
 watch([fromDate, toDate], () => {
