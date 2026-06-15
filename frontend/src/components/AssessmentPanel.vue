@@ -11,8 +11,8 @@
       </span>
     </div>
 
-    <div v-if="loading" class="compact-empty">Assessing domain activity...</div>
-    <div v-else-if="error" class="assessment-error">
+    <div v-if="loading" class="compact-empty" aria-live="polite">Assessing domain activity...</div>
+    <div v-else-if="error" class="assessment-error" aria-live="polite">
       <strong>Assessment unavailable</strong>
       <span>{{ error }}</span>
     </div>

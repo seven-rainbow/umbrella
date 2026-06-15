@@ -7,13 +7,14 @@
       </div>
       <span>{{ series.length }} days</span>
     </div>
-    <div class="table-wrap">
+    <div class="table-wrap" role="region" aria-label="Daily rank details table">
       <table>
+        <caption style="display:none;">Daily rank and activity score data from {{ fromDate }} to {{ toDate }}</caption>
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Rank</th>
-            <th>Activity Score</th>
+            <th scope="col">Date</th>
+            <th scope="col">Rank</th>
+            <th scope="col">Activity Score</th>
           </tr>
         </thead>
         <tbody>

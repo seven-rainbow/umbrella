@@ -35,10 +35,10 @@
           @input="$emit('update:toDate', $event.target.value)"
         />
       </label>
-      <button class="query-submit" type="submit" :disabled="loading || Boolean(rangeError)">
+      <button class="query-submit" type="submit" :disabled="loading || Boolean(rangeError)" aria-label="Query domain ranking history" title="Load domain ranking history">
         {{ loading ? 'Loading' : 'Query' }}
       </button>
-      <button class="assessment-submit" type="button" :disabled="assessmentLoading || loading || Boolean(rangeError)" @click="$emit('assess')">
+      <button class="assessment-submit" type="button" :disabled="assessmentLoading || loading || Boolean(rangeError)" aria-label="Run AI assessment" title="Run an AI-powered risk assessment" @click="$emit('assess')">
         {{ assessmentLoading ? 'Assessing' : 'Assess' }}
       </button>
       <div class="range-presets" aria-label="Date range presets">
@@ -48,7 +48,7 @@
         <button type="button" @click="$emit('apply-range', 365)">1Y</button>
         <button type="button" @click="$emit('open-settings')">Model Settings</button>
       </div>
-      <p v-if="rangeError" class="range-error">{{ rangeError }}</p>
+      <p v-if="rangeError" class="range-error" aria-live="polite">{{ rangeError }}</p>
     </form>
   </section>
 </template>

@@ -8,7 +8,6 @@
   --line: #d8e0e4;
   --panel: rgba(255, 255, 255, 0.92);
   --rail: #121a1f;
-  --rail-soft: #1b292f;
   --signal: #008f7a;
   --signal-soft: #e6f5f1;
   --amber: #c47a10;
@@ -31,6 +30,52 @@ body {
 button,
 input {
   font: inherit;
+}
+
+/* ── global transitions ───────────────────────── */
+button,
+input,
+.top-domain-row,
+.volatile-main,
+.mini-action,
+.model-row button,
+.icon-button,
+.range-presets button,
+.risk-badge,
+.stat-list div {
+  transition: background-color 0.15s, border-color 0.15s, opacity 0.15s, transform 0.15s;
+}
+
+/* ── page entry animation ─────────────────────── */
+.dashboard-shell > * {
+  opacity: 0;
+  animation: shell-fade-in 0.4s ease forwards;
+}
+.dashboard-shell > *:nth-child(1) { animation-delay: 0.05s; }
+.dashboard-shell > *:nth-child(2) { animation-delay: 0.1s; }
+.dashboard-shell > *:nth-child(3) { animation-delay: 0.15s; }
+
+@keyframes shell-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── skeleton shimmer ──────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, var(--panel) 25%, #e2e8eb 50%, var(--panel) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+.skeleton-dark {
+  background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ── z-index layers ─────────────────────────────
@@ -150,6 +195,13 @@ input {
   justify-content: space-between;
   gap: 12px;
   min-height: 24px;
+  border-radius: 4px;
+  padding: 2px 4px;
+  cursor: default;
+}
+
+.stat-list div:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .stat-list dd {
@@ -158,6 +210,16 @@ input {
   font-family: Bahnschrift, "Segoe UI Variable", sans-serif;
   font-weight: 700;
   text-align: right;
+}
+
+.sidebar-error {
+  margin: 0;
+  border: 1px solid rgba(255, 180, 150, 0.35);
+  border-radius: 4px;
+  background: rgba(255, 200, 180, 0.18);
+  padding: 8px 10px;
+  color: #f0a090;
+  font-size: 12px;
 }
 
 .side-list-stack {
@@ -222,6 +284,58 @@ input {
   font-size: 13px;
 }
 
+/* ── unified custom scrollbar ──────────────────── */
+.top-domain-list,
+.overview-sidebar,
+.assessment-panel,
+.table-wrap,
+.model-modal {
+  scrollbar-width: thin;
+  scrollbar-color: #b8c6cc transparent;
+}
+
+.top-domain-list::-webkit-scrollbar,
+.overview-sidebar::-webkit-scrollbar,
+.assessment-panel::-webkit-scrollbar,
+.table-wrap::-webkit-scrollbar,
+.model-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.top-domain-list::-webkit-scrollbar-thumb,
+.overview-sidebar::-webkit-scrollbar-thumb,
+.assessment-panel::-webkit-scrollbar-thumb,
+.table-wrap::-webkit-scrollbar-thumb,
+.model-modal::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #b8c6cc;
+}
+
+.top-domain-list::-webkit-scrollbar-track,
+.overview-sidebar::-webkit-scrollbar-track,
+.assessment-panel::-webkit-scrollbar-track,
+.table-wrap::-webkit-scrollbar-track,
+.model-modal::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ── skip-navigation ───────────────────────────── */
+.skip-nav {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--signal);
+  border-radius: 4px;
+  color: #ffffff;
+  font-weight: 700;
+  padding: 8px 16px;
+  z-index: 100;
+  transition: top 0.2s;
+}
+.skip-nav:focus {
+  top: 16px;
+}
+
 .top-domain-list {
   display: grid;
   align-content: start;
@@ -229,21 +343,6 @@ input {
   min-height: 0;
   overflow-y: auto;
   padding: 10px 10px 14px 12px;
-  scrollbar-color: #b8c6cc transparent;
-  scrollbar-width: thin;
-}
-
-.top-domain-list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.top-domain-list::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: #b8c6cc;
-}
-
-.top-domain-list::-webkit-scrollbar-track {
-  background: transparent;
 }
 
 .top-domain-row {
@@ -426,7 +525,14 @@ input {
 }
 
 .assessment-submit {
+  background: transparent;
+  border: 2px solid #26343a;
+  color: #26343a;
+}
+
+.assessment-submit:not(:disabled):hover {
   background: #26343a;
+  color: #ffffff;
 }
 
 .query-submit:disabled,
@@ -478,7 +584,7 @@ input {
 
 .assessment-panel {
   overflow-y: auto;
-  max-height: 480px;
+  max-height: min(600px, 80vh);
 }
 
 .panel-header {
@@ -534,9 +640,12 @@ input {
   background: var(--signal);
 }
 
-.risk-medium,
-.risk-unknown {
+.risk-medium {
   background: var(--amber);
+}
+
+.risk-unknown {
+  background: var(--muted);
 }
 
 .risk-high {
@@ -668,6 +777,30 @@ th {
   place-items: center;
   background: rgba(18, 26, 31, 0.45);
   padding: 18px;
+}
+
+/* ── modal transition ──────────────────────────── */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-enter-active .model-modal,
+.modal-leave-active .model-modal {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.modal-enter-from {
+  opacity: 0;
+}
+.modal-enter-from .model-modal {
+  transform: translateY(12px) scale(0.97);
+  opacity: 0;
+}
+.modal-leave-to {
+  opacity: 0;
+}
+.modal-leave-to .model-modal {
+  transform: translateY(8px) scale(0.97);
+  opacity: 0;
 }
 
 .model-modal {

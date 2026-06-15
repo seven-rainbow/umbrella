@@ -1,78 +1,80 @@
 <template>
-  <div v-if="open" class="modal-backdrop">
-    <section class="model-modal">
-      <div class="panel-header">
-        <div>
-          <h2>Model Settings</h2>
-          <p>OpenAI-compatible providers and default assessment model.</p>
-        </div>
-        <button class="icon-button" type="button" @click="$emit('close')">Close</button>
-      </div>
-
-      <p v-if="error" class="error-message">{{ error }}</p>
-      <p v-if="notice" class="success-message">{{ notice }}</p>
-
-      <div class="settings-grid">
-        <form class="settings-form" @submit.prevent="saveProvider">
-          <h3>Provider</h3>
-          <label>
-            <span>Name</span>
-            <input v-model="providerForm.name" required />
-          </label>
-          <label>
-            <span>Base URL</span>
-            <input v-model="providerForm.base_url" placeholder="https://api.openai.com/v1" required />
-          </label>
-          <label>
-            <span>API key env var</span>
-            <input v-model="providerForm.api_key_secret_ref" placeholder="OPENAI_API_KEY" />
-          </label>
-          <button class="query-submit" type="submit">Save Provider</button>
-        </form>
-
-        <form class="settings-form" @submit.prevent="saveModel">
-          <h3>Model</h3>
-          <label>
-            <span>Provider</span>
-            <select v-model="modelForm.provider_id" required>
-              <option value="" disabled>Select provider</option>
-              <option v-for="provider in configs.providers" :key="provider.provider_id" :value="provider.provider_id">
-                {{ provider.name }}
-              </option>
-            </select>
-          </label>
-          <label>
-            <span>Model name</span>
-            <input v-model="modelForm.model_name" placeholder="gpt-4.1-mini" required />
-          </label>
-          <label>
-            <span>Timeout seconds</span>
-            <input v-model.number="modelForm.timeout_seconds" type="number" min="1" />
-          </label>
-          <label class="checkbox-row">
-            <input v-model="modelForm.is_default" type="checkbox" />
-            <span>Set as default</span>
-          </label>
-          <button class="query-submit" type="submit">Save Model</button>
-        </form>
-      </div>
-
-      <div class="model-list">
-        <div v-for="model in configs.models" :key="model.model_id" class="model-row">
+  <Transition name="modal">
+    <div v-show="open" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Model Settings" @click.self="$emit('close')">
+      <section class="model-modal" ref="modalEl">
+        <div class="panel-header">
           <div>
-            <strong>{{ model.model_name }}</strong>
-            <span>{{ providerName(model.provider_id) }} · {{ model.is_default ? 'default' : 'available' }}</span>
+            <h2>Model Settings</h2>
+            <p>OpenAI-compatible providers and default assessment model.</p>
           </div>
-          <button type="button" @click="makeDefault(model.model_id)">Default</button>
-          <button type="button" @click="testModel(model.model_id)">Test</button>
+          <button class="icon-button" type="button" aria-label="Close settings" @click="$emit('close')">Close</button>
         </div>
-      </div>
-    </section>
-  </div>
+
+        <p v-if="error" class="error-message">{{ error }}</p>
+        <p v-if="notice" class="success-message">{{ notice }}</p>
+
+        <div class="settings-grid">
+          <form class="settings-form" @submit.prevent="saveProvider">
+            <h3>Provider</h3>
+            <label>
+              <span>Name</span>
+              <input v-model="providerForm.name" required />
+            </label>
+            <label>
+              <span>Base URL</span>
+              <input v-model="providerForm.base_url" placeholder="https://api.openai.com/v1" required />
+            </label>
+            <label>
+              <span>API key env var</span>
+              <input v-model="providerForm.api_key_secret_ref" placeholder="OPENAI_API_KEY" />
+            </label>
+            <button class="query-submit" type="submit">Save Provider</button>
+          </form>
+
+          <form class="settings-form" @submit.prevent="saveModel">
+            <h3>Model</h3>
+            <label>
+              <span>Provider</span>
+              <select v-model="modelForm.provider_id" required>
+                <option value="" disabled>Select provider</option>
+                <option v-for="provider in configs.providers" :key="provider.provider_id" :value="provider.provider_id">
+                  {{ provider.name }}
+                </option>
+              </select>
+            </label>
+            <label>
+              <span>Model name</span>
+              <input v-model="modelForm.model_name" placeholder="gpt-4.1-mini" required />
+            </label>
+            <label>
+              <span>Timeout seconds</span>
+              <input v-model.number="modelForm.timeout_seconds" type="number" min="1" />
+            </label>
+            <label class="checkbox-row">
+              <input v-model="modelForm.is_default" type="checkbox" />
+              <span>Set as default</span>
+            </label>
+            <button class="query-submit" type="submit">Save Model</button>
+          </form>
+        </div>
+
+        <div class="model-list">
+          <div v-for="model in configs.models" :key="model.model_id" class="model-row">
+            <div>
+              <strong>{{ model.model_name }}</strong>
+              <span>{{ providerName(model.provider_id) }} · {{ model.is_default ? 'default' : 'available' }}</span>
+            </div>
+            <button type="button" @click="makeDefault(model.model_id)">Default</button>
+            <button type="button" @click="testModel(model.model_id)">Test</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </Transition>
 </template>
 
 <script setup>
-import { reactive, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { createModel, createProvider, fetchModelConfigs, setDefaultModel, testModelConnection } from '../services/modelConfigApi'
 
 const props = defineProps({
@@ -86,6 +88,7 @@ const emit = defineEmits(['close'])
 const configs = reactive({ providers: [], models: [] })
 const error = ref('')
 const notice = ref('')
+const modalEl = ref(null)
 const providerForm = reactive({
   name: 'OpenAI Compatible',
   provider_type: 'openai-compatible',
@@ -102,12 +105,57 @@ const modelForm = reactive({
   is_default: true
 })
 
+/* ── focus trap ──────────────────────────────── */
+let previouslyFocused = null
+
+function trapFocus(event) {
+  if (!modalEl.value) return
+  const focusable = modalEl.value.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  )
+  if (focusable.length === 0) return
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
+
+function onKeydown(event) {
+  if (event.key === 'Escape') {
+    emit('close')
+  } else if (event.key === 'Tab') {
+    trapFocus(event)
+  }
+}
+
 watch(
   () => props.open,
-  (open) => {
-    if (open) loadConfigs()
+  async (open) => {
+    if (open) {
+      previouslyFocused = document.activeElement
+      document.addEventListener('keydown', onKeydown)
+      await loadConfigs()
+      await nextTick()
+      const first = modalEl.value?.querySelector('button, input, select')
+      first?.focus()
+    } else {
+      document.removeEventListener('keydown', onKeydown)
+      if (previouslyFocused && previouslyFocused.focus) {
+        previouslyFocused.focus()
+      }
+      previouslyFocused = null
+    }
   }
 )
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeydown)
+})
 
 async function loadConfigs() {
   error.value = ''

@@ -1,5 +1,5 @@
 <template>
-  <div ref="chartEl" class="rank-chart"></div>
+  <div ref="chartEl" class="rank-chart" role="img" aria-label="Daily rank curve chart"></div>
 </template>
 
 <script setup>

@@ -1,23 +1,35 @@
 <template>
   <main class="dashboard-shell">
-    <OverviewSidebar :overview="overview" :activity="activity" />
+    <a href="#main-content" class="skip-nav">Skip to main content</a>
+    <OverviewSidebar
+      :overview="overview"
+      :activity="activity"
+      :domain="domain"
+      :loading-overview="overviewLoading"
+      :loading-activity="loading"
+      :error="overviewError"
+    />
 
     <div class="side-list-stack">
       <TopDomainsPanel
         :snapshot-date="topDomains?.snapshot_date"
         :domains="topDomains?.domains ?? []"
         :selected-domain="domain"
+        :loading="topDomainsLoading"
+        :error="topDomainsError"
         @select="selectTopDomain"
       />
       <VolatileDomainsPanel
         :snapshot-date="volatileDomains?.snapshot_date"
         :domains="volatileDomains?.domains ?? []"
+        :loading="volatileLoading"
+        :error="volatileError"
         @select="selectTopDomain"
         @assess="assessVolatileDomain"
       />
     </div>
 
-    <div class="main-content">
+    <div id="main-content" class="main-content">
       <QueryPanel
         v-model:domain="domain"
         v-model:from-date="fromDate"
@@ -32,7 +44,7 @@
         @submit="loadActivity"
       />
 
-      <p v-if="error" class="error-message">{{ error }}</p>
+      <p v-if="error" class="error-message" aria-live="polite">{{ error }}</p>
 
       <section class="chart-panel">
         <div class="panel-header">
@@ -85,8 +97,14 @@ const topDomains = ref(null)
 const volatileDomains = ref(null)
 const assessment = ref(null)
 const loading = ref(false)
+const overviewLoading = ref(true)
+const topDomainsLoading = ref(true)
+const volatileLoading = ref(true)
 const assessmentLoading = ref(false)
 const error = ref('')
+const overviewError = ref('')
+const topDomainsError = ref('')
+const volatileError = ref('')
 const assessmentError = ref('')
 const fromDate = ref('')
 const toDate = ref('')
@@ -210,26 +228,38 @@ async function assessVolatileDomain(selectedDomain) {
 }
 
 async function loadOverview() {
+  overviewLoading.value = true
+  overviewError.value = ''
   try {
     overview.value = await fetchOverview()
   } catch (err) {
-    error.value = err.message
+    overviewError.value = err.message
+  } finally {
+    overviewLoading.value = false
   }
 }
 
 async function loadTopDomains() {
+  topDomainsLoading.value = true
+  topDomainsError.value = ''
   try {
     topDomains.value = await fetchCurrentTopDomains()
   } catch (err) {
-    error.value = err.message
+    topDomainsError.value = err.message
+  } finally {
+    topDomainsLoading.value = false
   }
 }
 
 async function loadVolatileDomains() {
+  volatileLoading.value = true
+  volatileError.value = ''
   try {
     volatileDomains.value = await fetchVolatileDomains()
   } catch (err) {
-    error.value = err.message
+    volatileError.value = err.message
+  } finally {
+    volatileLoading.value = false
   }
 }
 
